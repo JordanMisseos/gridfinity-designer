@@ -221,3 +221,11 @@ body{
   overflow:hidden;
   position:relative;
 }
+
+/* Prevent browser gestures from cancelling pointer drag */
+.bin { touch-action: none; }
+
+.viewer3d, .viewer3d canvas { touch-action: none; }
+
+/* Optional: prevents text selection while dragging */
+.canvasWrap, .viewerWrap { user-select: none; }

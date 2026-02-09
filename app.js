@@ -213,11 +213,15 @@ function downloadText(filename, text){
 let drag = null;
 
 function onPointerDown(e){
+  e.preventDefault();
+  e.stopPropagation();
+
   const id = e.currentTarget.dataset.id;
   const b = state.bins.find(x => x.id === id);
   if (!b) return;
 
   state.selectedId = id;
+
   const start = { x:e.clientX, y:e.clientY };
   const orig = { x:b.x, y:b.y };
 
@@ -230,8 +234,11 @@ function onPointerDown(e){
   render();
 }
 
+
 function onPointerMove(e){
   if (!drag) return;
+  e.preventDefault();
+  e.stopPropagation();
   const b = state.bins.find(x => x.id === drag.id);
   if (!b) return;
 
