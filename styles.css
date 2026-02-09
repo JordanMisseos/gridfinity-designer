@@ -52,7 +52,7 @@ body{
 }
 
 .controls input{
-  width:110px;
+  width:120px;
   padding:8px 10px;
   border-radius:10px;
   border:1px solid #1f2b43;
@@ -84,6 +84,12 @@ body{
   grid-template-columns: 1fr 260px;
   gap:14px;
   padding:14px;
+}
+
+.work{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
 }
 
 .canvasWrap{
@@ -186,3 +192,32 @@ body{
 }
 .client .bin .sub{display:none}
 .client .bin .tag{display:none}
+
+.viewerWrap{
+  background:var(--panel);
+  border:1px solid #1e2a40;
+  border-radius:16px;
+  padding:14px;
+  min-height: calc(100vh - 92px);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+.viewerHeader{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:10px;
+}
+
+.viewerHeader h3{margin:0}
+.viewerHeader small{color:var(--muted)}
+
+.viewer3d{
+  flex:1;
+  border:1px solid #1e2a40;
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+}

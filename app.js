@@ -8,21 +8,30 @@ const gridSizeInput = document.getElementById("gridSize");
 
 const binWInput = document.getElementById("binW");
 const binHInput = document.getElementById("binH");
+const binZInput = document.getElementById("binZ");
 const binLabelInput = document.getElementById("binLabel");
+
+const wallHInput = document.getElementById("wallH");
+const baseTInput = document.getElementById("baseT");
 
 const applyDrawerBtn = document.getElementById("applyDrawer");
 const addBinBtn = document.getElementById("addBin");
 const toggleClientBtn = document.getElementById("toggleClient");
 const exportJsonBtn = document.getElementById("exportJson");
+const exportPng3dBtn = document.getElementById("exportPng3d");
 const clearAllBtn = document.getElementById("clearAll");
 
 let state = {
   gridMM: 42,
   drawerMM: { w: 500, h: 350 },
+  wallHMM: 35,
+  baseTMM: 6,
+
   cellPx: 28,          // visual scale
   cols: 0,
   rows: 0,
-  bins: [],            // {id, x,y,w,h,label,colorAlt}
+
+  bins: [],            // {id, x,y,w,h,zmm,label,colorAlt}
   selectedId: null,
   clientView: false
 };
@@ -35,16 +44,18 @@ function computeGrid(){
   state.gridMM = Number(gridSizeInput.value);
   state.drawerMM.w = Number(drawerW.value);
   state.drawerMM.h = Number(drawerH.value);
+  state.wallHMM = Number(wallHInput.value);
+  state.baseTMM = Number(baseTInput.value);
 
   state.cols = Math.max(1, Math.floor(state.drawerMM.w / state.gridMM));
   state.rows = Math.max(1, Math.floor(state.drawerMM.h / state.gridMM));
 
-  // canvas size in px
   canvas.style.backgroundSize = `${state.cellPx}px ${state.cellPx}px`;
   canvas.style.width = `${state.cols * state.cellPx}px`;
   canvas.style.height = `${state.rows * state.cellPx}px`;
 
-  info.textContent = `Drawer: ${state.drawerMM.w}×${state.drawerMM.h} mm • Grid: ${state.gridMM} mm • Cells: ${state.cols}×${state.rows}`;
+  info.textContent =
+    `Drawer: ${state.drawerMM.w}×${state.drawerMM.h} mm • Grid: ${state.gridMM} mm • Cells: ${state.cols}×${state.rows}`;
 }
 
 function rectsOverlap(a, b){
@@ -63,6 +74,12 @@ function snapToGrid(px){
   return Math.round(px / state.cellPx);
 }
 
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
 function render(){
   canvas.innerHTML = "";
   binList.innerHTML = "";
@@ -79,7 +96,6 @@ function render(){
     el.style.width = `${b.w * state.cellPx}px`;
     el.style.height= `${b.h * state.cellPx}px`;
 
-    // alternate color for visual variety
     if (b.colorAlt){
       el.style.background = "color-mix(in srgb, var(--bin2) 65%, black)";
     }
@@ -87,7 +103,7 @@ function render(){
     el.innerHTML = `
       <div class="meta">
         <div class="title">${escapeHtml(b.label)}</div>
-        <div class="sub">${b.w}×${b.h} cells</div>
+        <div class="sub">${b.w}×${b.h} cells • ${b.zmm}mm</div>
       </div>
       <div class="tag">#${b.id.slice(0,4)}</div>
     `;
@@ -100,7 +116,6 @@ function render(){
 
     canvas.appendChild(el);
 
-    // side list
     const row = document.createElement("div");
     row.className = "binRow";
     row.innerHTML = `
@@ -108,29 +123,28 @@ function render(){
         <strong>${escapeHtml(b.label)}</strong>
         <span>${b.w}×${b.h}</span>
       </div>
-      <small>Pos: (${b.x}, ${b.y})</small>
+      <small>Pos: (${b.x}, ${b.y}) • Height: ${b.zmm}mm</small>
       <button data-remove="${b.id}">Remove</button>
     `;
     row.querySelector("button").addEventListener("click", () => removeBin(b.id));
     binList.appendChild(row);
   }
-}
 
-function escapeHtml(str){
-  return str.replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[m]));
+  // notify 3D view to sync
+  if (window.__gf3dUpdate) window.__gf3dUpdate();
 }
 
 function addBin(){
   const w = Math.max(1, Number(binWInput.value));
   const h = Math.max(1, Number(binHInput.value));
+  const zmm = Math.max(5, Number(binZInput.value));
   const label = (binLabelInput.value || "Bin").trim();
 
   const b = {
     id: uid(),
     x: 0, y: 0,
     w, h,
+    zmm,
     label,
     colorAlt: state.bins.length % 2 === 1
   };
@@ -174,12 +188,15 @@ function exportJSON(){
   const payload = {
     gridMM: state.gridMM,
     drawerMM: state.drawerMM,
+    wallHMM: state.wallHMM,
+    baseTMM: state.baseTMM,
     cols: state.cols,
     rows: state.rows,
-    bins: state.bins.map(b => ({ id:b.id, x:b.x, y:b.y, w:b.w, h:b.h, label:b.label }))
+    bins: state.bins.map(b => ({
+      id: b.id, x: b.x, y: b.y, w: b.w, h: b.h, zmm: b.zmm, label: b.label
+    }))
   };
   const txt = JSON.stringify(payload, null, 2);
-  navigator.clipboard.writeText(txt).catch(()=>{});
   downloadText("gridfinity-layout.json", txt);
 }
 
@@ -192,7 +209,7 @@ function downloadText(filename, text){
   URL.revokeObjectURL(a.href);
 }
 
-// Drag logic
+// ---------- 2D Drag logic ----------
 let drag = null;
 
 function onPointerDown(e){
@@ -221,10 +238,9 @@ function onPointerMove(e){
   const dx = e.clientX - drag.start.x;
   const dy = e.clientY - drag.start.y;
 
-  const nx = drag.orig.x + snapToGrid(dx);
-  const ny = drag.orig.y + snapToGrid(dy);
+  let nx = drag.orig.x + snapToGrid(dx);
+  let ny = drag.orig.y + snapToGrid(dy)
 
-  // temp place
   const test = {...b, x:nx, y:ny};
 
   // clamp to bounds
@@ -253,14 +269,17 @@ function toggleClient(){
 
 function applyDrawer(){
   computeGrid();
+
   // remove bins that no longer fit
   state.bins = state.bins.filter(b => withinBounds(b));
-  // also ensure no overlaps; if overlaps occur, keep earlier bins
+
+  // ensure no overlaps; keep earlier bins
   const kept = [];
   for(const b of state.bins){
     if (!kept.some(k => rectsOverlap(b, k))) kept.push(b);
   }
   state.bins = kept;
+
   render();
 }
 
@@ -276,6 +295,14 @@ addBinBtn.addEventListener("click", addBin);
 toggleClientBtn.addEventListener("click", toggleClient);
 exportJsonBtn.addEventListener("click", exportJSON);
 clearAllBtn.addEventListener("click", clearAll);
+
+// 3D PNG export delegated to viewer
+exportPng3dBtn.addEventListener("click", ()=>{
+  if (window.__gf3dExportPng) window.__gf3dExportPng();
+});
+
+// Expose state/render for 3D
+window.__gf = { state, render };
 
 // init
 computeGrid();
