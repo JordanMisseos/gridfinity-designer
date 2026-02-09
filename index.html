@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gridfinity Drawer Designer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Gridfinity Designer</div>
+
+    <div class="controls">
+      <label>
+        Drawer W (mm)
+        <input id="drawerW" type="number" value="500" min="50" step="1" />
+      </label>
+      <label>
+        Drawer H (mm)
+        <input id="drawerH" type="number" value="350" min="50" step="1" />
+      </label>
+      <label>
+        Grid (mm)
+        <input id="gridSize" type="number" value="42" min="10" step="1" />
+      </label>
+
+      <button id="applyDrawer">Apply</button>
+
+      <div class="divider"></div>
+
+      <label>
+        Bin W (cells)
+        <input id="binW" type="number" value="2" min="1" step="1" />
+      </label>
+      <label>
+        Bin H (cells)
+        <input id="binH" type="number" value="2" min="1" step="1" />
+      </label>
+      <label>
+        Label
+        <input id="binLabel" type="text" value="Sockets" />
+      </label>
+      <button id="addBin">Add bin</button>
+
+      <div class="divider"></div>
+
+      <button id="toggleClient">Client view</button>
+      <button id="exportJson">Export JSON</button>
+      <button id="clearAll" class="danger">Clear</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="canvasWrap">
+      <div id="info" class="info"></div>
+      <div id="canvas" class="canvas" aria-label="Designer canvas"></div>
+    </section>
+
+    <aside class="side">
+      <h3>Bins</h3>
+      <div id="binList" class="binList"></div>
+      <p class="hint">
+        Tip: drag bins. Click a bin to select. Use Delete to remove.
+      </p>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
